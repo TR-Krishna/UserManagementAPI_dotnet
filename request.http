@@ -1,0 +1,198 @@
+
+@baseUrl = http://localhost:5107
+@contentType = application/json
+@token = dev-token-hr-123
+
+### ------------------------------------------------------------
+### 0. AUTH TESTS
+### ------------------------------------------------------------
+
+### 200 - valid token
+GET {{baseUrl}}/api/users
+Authorization: Bearer {{token}}
+Accept: {{contentType}}
+
+### 401 - no token
+GET {{baseUrl}}/api/users
+Accept: {{contentType}}
+
+### 401 - wrong token
+GET {{baseUrl}}/api/users
+Authorization: Bearer wrong-token
+Accept: {{contentType}}
+
+### ------------------------------------------------------------
+### 1. CREATE (POST) -> 201 Created
+### ------------------------------------------------------------
+# @name createUser
+POST {{baseUrl}}/api/users
+Authorization: Bearer {{token}}
+Content-Type: {{contentType}}
+
+{
+  "firstName": "Asha",
+  "lastName": "Rao",
+  "email": "asha.rao@company.com",
+  "department": "HR",
+  "jobTitle": "HR Analyst",
+  "isActive": true
+}
+
+### Save the new user's Id for the requests below
+@userId = {{createUser.response.body.$.id}}
+
+### Create a second user (IT) -> 201
+POST {{baseUrl}}/api/users
+Authorization: Bearer {{token}}
+Content-Type: {{contentType}}
+
+{
+  "firstName": "Ravi",
+  "lastName": "Kumar",
+  "email": "ravi.kumar@company.com",
+  "department": "IT",
+  "jobTitle": "Systems Engineer",
+  "isActive": true
+}
+
+### Create a third user (IT, inactive) -> 201
+POST {{baseUrl}}/api/users
+Authorization: Bearer {{token}}
+Content-Type: {{contentType}}
+
+{
+  "firstName": "Meera",
+  "lastName": "Nair",
+  "email": "meera.nair@company.com",
+  "department": "IT",
+  "jobTitle": "Support Engineer",
+  "isActive": false
+}
+
+### ------------------------------------------------------------
+### 2. GET (list) -> 200
+### ------------------------------------------------------------
+
+### All users (default paging: page=1, pageSize=20)
+GET {{baseUrl}}/api/users
+Authorization: Bearer {{token}}
+Accept: {{contentType}}
+
+### Filter by department
+GET {{baseUrl}}/api/users?department=IT
+Authorization: Bearer {{token}}
+Accept: {{contentType}}
+
+### Filter by active status
+GET {{baseUrl}}/api/users?isActive=true
+Authorization: Bearer {{token}}
+Accept: {{contentType}}
+
+### Combine filters + paging
+GET {{baseUrl}}/api/users?department=IT&isActive=true&page=1&pageSize=5
+Authorization: Bearer {{token}}
+Accept: {{contentType}}
+
+### ------------------------------------------------------------
+### 3. GET by Id -> 200
+### ------------------------------------------------------------
+GET {{baseUrl}}/api/users/{{userId}}
+Authorization: Bearer {{token}}
+Accept: {{contentType}}
+
+### ------------------------------------------------------------
+### 4. UPDATE (PUT) -> 200 OK
+### ------------------------------------------------------------
+PUT {{baseUrl}}/api/users/{{userId}}
+Authorization: Bearer {{token}}
+Content-Type: {{contentType}}
+
+{
+  "firstName": "Asha",
+  "lastName": "Rao",
+  "email": "asha.rao@company.com",
+  "department": "IT",
+  "jobTitle": "Senior Systems Engineer",
+  "isActive": true
+}
+
+### ------------------------------------------------------------
+### 5. DELETE -> 204 No Content
+### ------------------------------------------------------------
+DELETE {{baseUrl}}/api/users/{{userId}}
+Authorization: Bearer {{token}}
+
+### Confirm it's gone -> 404 Not Found
+GET {{baseUrl}}/api/users/{{userId}}
+Authorization: Bearer {{token}}
+Accept: {{contentType}}
+
+### ------------------------------------------------------------
+### 6. NEGATIVE TESTS
+### ------------------------------------------------------------
+
+### 400 - validation errors (missing names, bad email)
+POST {{baseUrl}}/api/users
+Authorization: Bearer {{token}}
+Content-Type: {{contentType}}
+
+{
+  "firstName": "",
+  "lastName": "",
+  "email": "not-an-email",
+  "department": "IT",
+  "jobTitle": "Tester"
+}
+
+### 400 - invalid department value
+POST {{baseUrl}}/api/users
+Authorization: Bearer {{token}}
+Content-Type: {{contentType}}
+
+{
+  "firstName": "Test",
+  "lastName": "User",
+  "email": "test.user@company.com",
+  "department": "Marketing",
+  "jobTitle": "Tester"
+}
+
+### 409 - duplicate email (Ravi must exist first, run after the create above)
+POST {{baseUrl}}/api/users
+Authorization: Bearer {{token}}
+Content-Type: {{contentType}}
+
+{
+  "firstName": "Another",
+  "lastName": "Ravi",
+  "email": "RAVI.KUMAR@company.com",
+  "department": "IT",
+  "jobTitle": "Engineer"
+}
+
+### 404 - GET unknown Id
+GET {{baseUrl}}/api/users/00000000-0000-0000-0000-000000000001
+Authorization: Bearer {{token}}
+Accept: {{contentType}}
+
+### 404 - PUT unknown Id
+PUT {{baseUrl}}/api/users/00000000-0000-0000-0000-000000000001
+Authorization: Bearer {{token}}
+Content-Type: {{contentType}}
+
+{
+  "firstName": "Ghost",
+  "lastName": "User",
+  "email": "ghost@company.com",
+  "department": "HR",
+  "jobTitle": "Nobody"
+}
+
+### 404 - DELETE unknown Id
+DELETE {{baseUrl}}/api/users/00000000-0000-0000-0000-000000000001
+Authorization: Bearer {{token}}
+
+### 404 - malformed Id (route constraint {id:guid} doesn't match)
+GET {{baseUrl}}/api/users/b0f84908-cc4a-4efb-9cf4-82f64e908233
+Authorization: Bearer {{token}}
+Accept: {{contentType}}
